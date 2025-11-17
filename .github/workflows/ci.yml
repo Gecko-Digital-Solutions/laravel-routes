@@ -1,35 +1,41 @@
-name: Exécuter les Tests
+name: Run Tests
 
-# Se déclenche sur un 'push' (ex: commit) ou un 'pull_request'
+# Triggers on 'push' (e.g., commit) or 'pull_request'
 on: [push, pull_request]
 
 jobs:
   test:
-    # Fait tourner les tests sur les versions de PHP que vous supportez
+    # Run tests on the PHP versions you support
     strategy:
       matrix:
-        php: ['8.2', '8.3', '8.4'] # Basé sur votre "php": "^8.2"
+        php: ['8.2', '8.3', '8.4'] # Based on your "php": "^8.2"
 
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Récupère le code de votre dépôt
+      # 1. Checkout the code from your repository
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Installe la bonne version de PHP (depuis la matrice)
+      # 2. Install the correct PHP version (from the matrix)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, xml # Ajoute les extensions dont PHPUnit a besoin
-          coverage: xdebug # Active Xdebug pour la couverture de code
+          extensions: dom, xml # Add extensions that PHPUnit needs
+          coverage: xdebug # Enable Xdebug for code coverage
 
-      # 3. Installe les dépendances Composer
+      # 3. Install Composer dependencies
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress
 
-      # 4. Exécute les tests (et génère le rapport de couverture)
+      # 4. Run tests (and generate coverage report)
       - name: Run Tests
         run: vendor/bin/phpunit --coverage-clover build/logs/clover.xml
-        
+
+      # 5. Upload coverage report to Coveralls
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: build/logs/clover.xml
