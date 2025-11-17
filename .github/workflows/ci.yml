@@ -11,19 +11,11 @@ jobs:
       # Don't cancel all jobs if one fails
       fail-fast: false 
       matrix:
-        # 1. PHP Matrix 
         php: ['8.2', '8.3', '8.4']
-        
-        # 2. Laravel Matrix
         laravel: ['^10.0', '^11.0', '^12.0']
-
-        # 3. Exclusions 
-        # Exclude impossible combinations
         exclude:
-          # Laravel 12 requires PHP 8.3+
           - php: '8.2'
             laravel: '^12.0'
-          # Laravel 10 & 11 do not support PHP 8.4
           - php: '8.4'
             laravel: '^10.0'
           - php: '8.4'
@@ -42,14 +34,11 @@ jobs:
           extensions: dom, xml
           coverage: xdebug
 
-      # 3. ADDED STEP: Force Laravel Version
-      # This tells Composer which Laravel version to target
-      # for this specific matrix job.
+      # 3. Install Laravel Dependencies
       - name: Install Laravel Dependencies
         run: composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
 
-      # 4. Install other dependencies (PHPUnit, Testbench...)
-      # Composer will resolve the correct versions (thanks to your "||")
+      # 4. Install Dependencies
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress
 
@@ -63,4 +52,19 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: build/logs/clover.xml
-          
+          # Tell Coveralls this is part of a parallel build
+          parallel: true 
+
+  # This job will run ONLY after all 'test' jobs are finished
+  coveralls:
+    name: Finalize Coveralls
+    # 'needs' waits for the 'test' job matrix to complete
+    needs: test 
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Tell Coveralls to merge all parallel jobs
+          parallel-finished: true
