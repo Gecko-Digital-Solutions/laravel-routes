@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for reports to be processed
-        run: sleep 60
+        run: sleep 15
       - name: Send Coveralls Finished
         uses: coverallsapp/github-action@v2
         with:
