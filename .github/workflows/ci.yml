@@ -60,6 +60,7 @@ jobs:
     name: Finalize Coveralls
     # 'needs' waits for the 'test' job matrix to complete
     needs: test 
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Send Coveralls Finished
