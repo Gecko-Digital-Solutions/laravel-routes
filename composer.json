@@ -1,0 +1,59 @@
+{
+    "name": "geckods/laravel-routes",
+    "description": "Organize Laravel routes by feature/functionality instead of centralizing them in a single file",
+    "keywords": [
+      "laravel",
+      "routes",
+      "feature-based",
+      "route-organization",
+      "modular",
+      "controller"
+    ],
+    "homepage": "https://geckods.com",
+    "license": "MIT",
+    "authors": [
+      {
+        "name": "Stephane Pecqueur",
+        "email": "stephane.pecqueur@gmail.com",
+        "homepage": "https://geckods.com",
+        "role": "Developer"
+      }
+    ],
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    },
+    "require": {
+      "php": "^8.2",
+      "laravel/framework": ">=10.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.6",
+        "phpunit/phpunit": "^12.4"
+    },
+    "autoload": {
+      "psr-4": {
+        "GeckoDS\\LaravelRoutes\\": "src/"
+      }
+    },
+    "autoload-dev": {
+      "psr-4": {
+        "GeckoDS\\LaravelRoutes\\Tests\\": "tests/"
+      }
+    },
+    "config": {
+      "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+          "aliases": {
+
+          },
+          "providers": [
+            "GeckoDS\\LaravelRoutes\\Providers\\LaravelRoutesProvider"
+          ]
+        }
+      },
+
+    "minimum-stability": "stable",
+    "prefer-stable": true
+  }

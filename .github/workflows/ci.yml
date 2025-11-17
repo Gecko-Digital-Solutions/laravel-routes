@@ -1,0 +1,35 @@
+name: Exécuter les Tests
+
+# Se déclenche sur un 'push' (ex: commit) ou un 'pull_request'
+on: [push, pull_request]
+
+jobs:
+  test:
+    # Fait tourner les tests sur les versions de PHP que vous supportez
+    strategy:
+      matrix:
+        php: ['8.2', '8.3', '8.4'] # Basé sur votre "php": "^8.2"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Récupère le code de votre dépôt
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Installe la bonne version de PHP (depuis la matrice)
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, xml # Ajoute les extensions dont PHPUnit a besoin
+          coverage: xdebug # Active Xdebug pour la couverture de code
+
+      # 3. Installe les dépendances Composer
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      # 4. Exécute les tests (et génère le rapport de couverture)
+      - name: Run Tests
+        run: vendor/bin/phpunit --coverage-clover build/logs/clover.xml
+        
