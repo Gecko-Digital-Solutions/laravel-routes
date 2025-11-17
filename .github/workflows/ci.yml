@@ -50,7 +50,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: build/logs/clover.xml
           parallel: true
-          run-id: ${{ github.run_id }}
 
   coveralls:
     name: Finalize Coveralls
@@ -63,4 +62,3 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true
-          run-id: ${{ github.run_id }}
