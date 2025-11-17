@@ -72,86 +72,72 @@ vendor/bin/phpunit --coverage-text
 ### GitHub Actions
 
 ```yaml
-name: Tests
+name: Run Tests & Coverage
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
     strategy:
+      fail-fast: false
       matrix:
-        php-version: ['8.2', '8.3', '8.4']
-    
+        php: ['8.2', '8.3', '8.4']
+        laravel: ['^10.0', '^11.0', '^12.0']
+        exclude:
+          - php: '8.2'
+            laravel: '^12.0'
+          - php: '8.4'
+            laravel: '^10.0'
+          - php: '8.4'
+            laravel: '^11.0'
+
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-version }}
-          extensions: json
-      
-      - name: Install dependencies
-        run: composer install
-      
-      - name: Run tests
-        run: composer test
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
+          php-version: ${{ matrix.php }}
+          extensions: dom, xml
+          coverage: xdebug
+
+      - name: Install Laravel Dependencies
+        run: composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run Tests
+        run: vendor/bin/phpunit --coverage-clover build/logs/clover.xml
+
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
         with:
-          file: ./coverage.xml
-          flags: unittests
-```
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: build/logs/clover.xml
+          parallel: true
+          build-number: ${{ github.run_id }}
 
-### GitLab CI
-
-```yaml
-stages:
-  - test
-
-test:
-  stage: test
-  image: php:8.4
-  
-  before_script:
-    - apt-get update && apt-get install -y git
-    - curl -fsSL https://getcomposer.org/installer | php
-    - php composer.phar install
-  
-  script:
-    - composer test
-  
-  coverage: '/Tests: .*?\n.*?Assertions: (\d+)/'
-```
-
-### GitLab CI (More complete with coverage)
-
-```yaml
-stages:
-  - test
-
-test:
-  stage: test
-  image: php:8.4
-  
-  before_script:
-    - apt-get update && apt-get install -y git unzip
-    - curl -sS https://getcomposer.org/installer | php
-    - php composer.phar install --no-progress
-  
-  script:
-    - vendor/bin/phpunit --coverage-clover=coverage.xml
-  
-  coverage: '/Tests: (\d+), Assertions: (\d+)/'
-  
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: coverage.xml
+  coveralls:
+    name: Finalize Coveralls
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+          build-number: ${{ github.run_id }}
 ```
 
 ## ✅ Checklist
@@ -217,13 +203,18 @@ chmod -R 777 tests/workbench/bootstrap/cache
 
 When tests pass, you should see:
 ```
-PHPUnit X.X.X by Sebastian Bergmann and contributors.
+PHPUnit 12.4.3 by Sebastian Bergmann and contributors.
 
-...........................                                       27 / 27 (100%)
+...............................                                   31 / 31 (100%)
 
-Time: 00:00.XXX, Memory: XX.00 MB
+Time: 00:00.439, Memory: 34.00 MB
 
-OK (27 tests, 35 assertions)
+OK (31 tests, 47 assertions)
+```
+
+### Code Coverage
+```
+RouteController.php: 13 of 16 statements covered (81.25%)
 ```
 
 ## 📚 Resources

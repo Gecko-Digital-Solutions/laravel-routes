@@ -8,35 +8,31 @@ use GeckoDS\LaravelRoutes\Tests\TestCase;
 class RouteControllerTest extends TestCase
 {
     /**
-     * Verifies that getRouteClasses discovers valid routes
+     * Verifies that getRouteClasses returns a Collection
      */
-    public function testDiscoversValidRouteClasses()
+    public function testGetRouteClassesReturnsCollection()
     {
         $controller = new RouteController();
         $routes = $controller->getRouteClasses();
 
-        $this->assertIsObject($routes);
-        // Les routes peuvent être 0 si le chemin n'est pas configuré ou si aucune classe n'est trouvée
-        // On teste juste que getRouteClasses() fonctionne correctement
-        $this->assertIsInt(count($routes));
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
     }
 
     /**
-     * Verifies that discovered routes are valid class instances or names
+     * Verifies that discovered routes are valid class names as strings
      */
     public function testReturnsClassNamesAsStrings()
     {
         $controller = new RouteController();
         $routes = $controller->getRouteClasses();
 
-        // If routes are discovered, verify they are strings
-        if (count($routes) > 0) {
+        if ($routes->isNotEmpty()) {
             foreach ($routes as $route) {
                 $this->assertIsString($route, 'Route should be a string (class name)');
                 $this->assertTrue(class_exists($route), "Class {$route} should exist");
             }
         } else {
-            // If no routes discovered, that's okay - test that we got a Collection
+            // When no routes discovered, verify we still get a Collection
             $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
         }
     }
@@ -49,80 +45,24 @@ class RouteControllerTest extends TestCase
         $controller = new RouteController();
         $routes = $controller->getRouteClasses();
 
-        if (count($routes) > 0) {
+        if ($routes->isNotEmpty()) {
             foreach ($routes as $route) {
+                $reflection = new \ReflectionClass($route);
                 $this->assertTrue(
-                    class_exists($route) && (new \ReflectionClass($route))->isSubclassOf('GeckoDS\LaravelRoutes\Routes\AbstractRouteController'),
+                    $reflection->isSubclassOf('GeckoDS\LaravelRoutes\Routes\AbstractRouteController'),
                     "Class {$route} should be a subclass of AbstractRouteController"
                 );
             }
         } else {
-            // If no routes discovered, that's okay - test that we got a Collection
+            // When no routes discovered, test that filtering logic is sound
             $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
         }
     }
 
     /**
-     * Verifies that the config path is respected
+     * Verifies that handle() calls routes from other_routes config
      */
-    public function testRespectsConfigPath()
-    {
-        $this->app['config']->set('routes.path', app_path('Http/Routes/**/*.php'));
-        
-        $controller = new RouteController();
-        $routes = $controller->getRouteClasses();
-
-        $this->assertGreaterThanOrEqual(0, count($routes));
-    }
-
-    /**
-     * Verifies that the namespace config is respected
-     */
-    public function testRespectsConfigPrefixNamespace()
-    {
-        $this->app['config']->set('routes.prefix_namespace', 'App\\Http\\Routes\\');
-        
-        $controller = new RouteController();
-        $routes = $controller->getRouteClasses();
-
-        if (count($routes) > 0) {
-            foreach ($routes as $route) {
-                $this->assertStringStartsWith('App\\Http\\Routes\\', $route);
-            }
-        } else {
-            // If no routes discovered, test passes - verify we got a Collection
-            $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
-        }
-    }
-
-    /**
-     * Verifies that handle() calls the discovered routes
-     */
-    public function testCallsDiscoveredRoutesOnHandle()
-    {
-        // Create a dynamic test route
-        $testRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $handleCalled = false;
-
-            public function handle()
-            {
-                self::$handleCalled = true;
-            }
-        };
-
-        $testClassName = get_class($testRoute);
-        $this->app['config']->set('routes.other_routes', [$testClassName]);
-
-        $controller = new RouteController();
-        $controller->handle();
-
-        $this->assertTrue($testRoute::$handleCalled, 'Test route should be called');
-    }
-
-    /**
-     * Verifies that other_routes from config are included
-     */
-    public function testIncludesOtherRoutesFromConfig()
+    public function testHandleCallsOtherRoutes()
     {
         $mockRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
             public static $called = false;
@@ -139,291 +79,40 @@ class RouteControllerTest extends TestCase
         $controller = new RouteController();
         $controller->handle();
 
-        $this->assertTrue($mockRoute::$called, 'Other route should be called');
+        $this->assertTrue($mockRoute::$called, 'Route should be called via handle()');
     }
 
     /**
-     * Verifies that getRouteClasses returns a Collection
+     * Verifies handle works with empty other_routes config
      */
-    public function testReturnsACollection()
-    {
-        $controller = new RouteController();
-        $routes = $controller->getRouteClasses();
-
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
-    }
-
-    /**
-     * Verifies that files not extending AbstractRouteController are filtered out
-     */
-    public function testFiltersOutClassesThatDontExtendAbstractRouteController()
-    {
-        // Import the invalid class to make sure it's loaded
-        require_once __DIR__ . '/../Fixtures/InvalidRouteNotExtending.php';
-        
-        // This test verifies that even if a file is found,
-        // if it doesn't extend AbstractRouteController, it's filtered out
-        // We test this by checking that InvalidRouteNotExtending class exists
-        // but is not returned from getRouteClasses
-        $this->assertTrue(
-            class_exists('GeckoDS\\LaravelRoutes\\Tests\\Fixtures\\InvalidRouteNotExtending'),
-            'InvalidRouteNotExtending class should exist after require_once'
-        );
-
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, new \Illuminate\Support\Collection());
-    }
-
-    /**
-     * Verifies that fixture routes are discovered correctly
-     */
-    public function testDiscoversFixtureRoutes()
-    {
-        // This test verifies that getRouteClasses can discover real route files
-        // We're using dynamic classes here instead of filesystem fixtures
-        // because the filtering depends on classes actually being loaded
-        
-        $validRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        $invalidRoute = new class {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        // Verify valid route can be checked
-        $reflection = new \ReflectionClass($validRoute);
-        $this->assertTrue($reflection->isSubclassOf('GeckoDS\LaravelRoutes\Routes\AbstractRouteController'));
-        
-        // Verify invalid route fails the check
-        $reflection2 = new \ReflectionClass($invalidRoute);
-        $this->assertFalse($reflection2->isSubclassOf('GeckoDS\LaravelRoutes\Routes\AbstractRouteController'));
-    }
-
-    /**
-     * Verifies that handle merges other_routes and discovered routes
-     */
-    public function testHandleMergesOtherRoutesWithDiscoveredRoutes()
-    {
-        $otherRouteCalled = false;
-        $otherRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-
-            public function handle()
-            {
-                self::$called = true;
-            }
-        };
-
-        $this->app['config']->set('routes.other_routes', [get_class($otherRoute)]);
-
-        $controller = new RouteController();
-        $controller->handle();
-
-        $this->assertTrue($otherRoute::$called, 'Other routes should be merged and called');
-    }
-
-    /**
-     * Verifies that handle works with empty other_routes config
-     */
-    public function testHandleWorksWithEmptyOtherRoutes()
-    {
-        $this->app['config']->set('routes.other_routes', []);
-
-        $controller = new RouteController();
-        $result = $controller->handle();
-
-        // Should not throw an exception
-        $this->assertNull($result);
-    }
-
-    /**
-     * Verifies that getRouteClasses correctly transforms file paths to class names
-     */
-    public function testPathToClassNameTransformation()
-    {
-        // Test the path transformation logic directly
-        $file = app_path('Http/Controllers/UserController.php');
-        $prefix = 'App\\Controllers\\';
-        
-        // Simulate what RouteController does
-        $classname = $prefix . str_replace([app_path('/'), '/', '.php'], ['', '\\', ''], $file);
-        
-        // Verify the transformation
-        $this->assertStringStartsWith('App\\Controllers\\', $classname);
-        $this->assertStringContainsString('UserController', $classname);
-        $this->assertStringNotContainsString('.php', $classname);
-        $this->assertStringNotContainsString('/', $classname);
-    }
-
-    /**
-     * Verifies that handle calls all merged routes
-     */
-    public function testHandleCallsAllRoutes()
-    {
-        $route1Called = false;
-        $route2Called = false;
-
-        $route1 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-
-            public function handle()
-            {
-                self::$called = true;
-            }
-        };
-
-        $route2 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-
-            public function handle()
-            {
-                self::$called = true;
-            }
-        };
-
-        $this->app['config']->set('routes.other_routes', [
-            get_class($route1),
-            get_class($route2),
-        ]);
-
-        $controller = new RouteController();
-        $controller->handle();
-
-        $this->assertTrue($route1::$called, 'First route should be called');
-        $this->assertTrue($route2::$called, 'Second route should be called');
-    }
-
-    /**
-     * Verifies that glob pattern with different extensions is respected
-     */
-    public function testGlobPatternWithOnlyPhpFiles()
-    {
-        // Test that the glob pattern correctly targets PHP files only
-        $path = __DIR__ . '/../Fixtures/*.php';
-        
-        $files = glob($path);
-        
-        // Verify we found some files
-        $this->assertGreaterThan(0, count($files), 'Glob should find .php files');
-        
-        // Verify all found files are PHP files
-        foreach ($files as $file) {
-            $this->assertStringEndsWith('.php', $file, 'Should only match .php files');
-            $this->assertTrue(is_file($file), 'Found item should be a file');
-        }
-    }
-
-    /**
-     * Verifies that the handle method merges routes correctly
-     */
-    public function testHandleMergesAllRoutes()
-    {
-        $route1 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        $route2 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        $this->app['config']->set('routes.other_routes', [
-            get_class($route1),
-            get_class($route2),
-        ]);
-
-        $controller = new RouteController();
-        $controller->handle();
-
-        $this->assertTrue($route1::$called, 'First route should be called');
-        $this->assertTrue($route2::$called, 'Second route should be called');
-    }
-
-    /**
-     * Verifies that getRouteClasses handles empty config gracefully
-     */
-    public function testGetRouteClassesWithEmptyOtherRoutes()
+    public function testHandleWorksWithEmptyConfig()
     {
         $this->app['config']->set('routes.other_routes', []);
         
         $controller = new RouteController();
         $result = $controller->handle();
 
-        // Should not throw an exception
         $this->assertNull($result);
     }
 
     /**
-     * Verifies that prefix_namespace can be empty string
+     * Verifies handle works with empty prefix namespace
      */
-    public function testEmptyPrefixNamespace()
+    public function testHandlesEmptyPrefixNamespace()
     {
         $this->app['config']->set('routes.prefix_namespace', '');
         
         $controller = new RouteController();
         $routes = $controller->getRouteClasses();
 
-        // Should return a collection regardless
         $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
     }
 
     /**
-     * Verifies that non-existent files in glob result are handled
+     * Verifies route classes are iterable after discovery
      */
-    public function testReflectionClassFiltering()
+    public function testRouteClassesAreIterable()
     {
-        // Create a valid route class
-        $validRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public function handle() {}
-        };
-
-        // Get reflection for the valid route
-        $reflection = new \ReflectionClass($validRoute);
-        
-        // Verify it's detected as a subclass
-        $this->assertTrue($reflection->isSubclassOf(\GeckoDS\LaravelRoutes\Routes\AbstractRouteController::class));
-    }
-
-    /**
-     * Verifies handle is callable
-     */
-    public function testHandleCallsAllMergedRoutes()
-    {
-        $handler1Called = false;
-        $handler2Called = false;
-
-        $route1 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        $route2 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
-            public static $called = false;
-            public function handle() { self::$called = true; }
-        };
-
-        $this->app['config']->set('routes.other_routes', [
-            get_class($route1),
-            get_class($route2),
-        ]);
-
-        $controller = new RouteController();
-        $controller->handle();
-
-        // Verify both routes were called
-        $this->assertTrue($route1::$called);
-        $this->assertTrue($route2::$called);
-    }
-
-    /**
-     * Verifies that getRouteClasses returns items after mapping
-     */
-    public function testGetRouteClassesReturnsClassNamesAfterMapping()
-    {
-        // Test that each mapped item is a string classname
         $testRoute = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
             public function handle() {}
         };
@@ -434,54 +123,119 @@ class RouteControllerTest extends TestCase
         $controller = new RouteController();
         $routes = $controller->getRouteClasses();
 
-        // Verify all items in the collection are strings
+        $this->assertTrue(is_iterable($routes));
         $routes->each(function($classname) {
-            $this->assertIsString($classname, 'Each mapped item should be a string classname');
+            $this->assertIsString($classname);
         });
-        
-        // If no routes from globbing, verify we can at least access the collection
-        $this->assertTrue(is_iterable($routes), 'Routes should be iterable');
     }
 
     /**
-     * Verifies default config values are used when not set
+     * Verifies that handle calls multiple routes correctly
      */
-    public function testDefaultConfigValues()
+    public function testHandleCallsMultipleRoutes()
     {
-        $controller = new RouteController();
-        $routes = $controller->getRouteClasses();
-
-        // When using default config, should return a Collection
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
-    }
-
-    /**
-     * Verifies the return type of getRouteClasses
-     */
-    public function testGetRouteClassesReturnType()
-    {
-        $controller = new RouteController();
-        $routes = $controller->getRouteClasses();
-
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
-    }
-
-    /**
-     * Verifies that call method is invoked with the correct routes
-     */
-    public function testCallMethodReceivesArrayOfRoutes()
-    {
-        $route = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
+        $route1 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
             public static $called = false;
             public function handle() { self::$called = true; }
         };
 
-        $className = get_class($route);
-        $this->app['config']->set('routes.other_routes', [$className]);
+        $route2 = new class extends \GeckoDS\LaravelRoutes\Routes\AbstractRouteController {
+            public static $called = false;
+            public function handle() { self::$called = true; }
+        };
+
+        $this->app['config']->set('routes.other_routes', [
+            get_class($route1),
+            get_class($route2),
+        ]);
 
         $controller = new RouteController();
         $controller->handle();
 
-        $this->assertTrue($route::$called, 'Route handle should be called via call method');
+        $this->assertTrue($route1::$called, 'All routes should be called');
+        $this->assertTrue($route2::$called);
+    }
+
+    /**
+     * Verifies glob pattern discovers PHP files from the workbench
+     */
+    public function testGlobDiscoversPhpFiles()
+    {
+        $pattern = app_path('Http/**/*.php');
+        $files = glob($pattern, GLOB_BRACE);
+        
+        $this->assertGreaterThan(0, count($files), 'Should find route files in workbench');
+        
+        foreach ($files as $file) {
+            $this->assertStringEndsWith('.php', $file);
+        }
+    }
+
+    /**
+     * Verifies files without expected class definitions are filtered
+     */
+    public function testFiltersOutFilesWithoutClass()
+    {
+        // Verify FileWithoutClass is found by glob but filtered by getRouteClasses
+        $pattern = app_path('Http/**/*.php');
+        $files = glob($pattern, GLOB_BRACE);
+        
+        $foundFileWithoutClass = false;
+        foreach ($files as $file) {
+            if (strpos($file, 'FileWithoutClass') !== false) {
+                $foundFileWithoutClass = true;
+                break;
+            }
+        }
+        
+        $this->assertTrue($foundFileWithoutClass, 'FileWithoutClass.php should be found by glob');
+        
+        // Verify it's filtered out from discovered routes
+        $controller = new RouteController();
+        $routes = $controller->getRouteClasses();
+        $routesArray = $routes->toArray();
+        
+        foreach ($routesArray as $route) {
+            $this->assertNotStringContainsString('FileWithoutClass', $route);
+        }
+    }
+
+    /**
+     * Verifies classes not extending AbstractRouteController are filtered out
+     */
+    public function testFiltersOutNonRouteClasses()
+    {
+        // Ensure NotARoute file exists
+        $notARouteFile = app_path('Http/Routes/NotARoute.php');
+        $this->assertTrue(file_exists($notARouteFile), 'NotARoute.php should exist');
+        
+        require_once $notARouteFile;
+        
+        $this->assertTrue(class_exists('App\\Http\\Routes\\NotARoute'));
+        $reflection = new \ReflectionClass('App\\Http\\Routes\\NotARoute');
+        $this->assertFalse($reflection->isSubclassOf('GeckoDS\LaravelRoutes\Routes\AbstractRouteController'));
+        
+        // Verify it's filtered out
+        $controller = new RouteController();
+        $routes = $controller->getRouteClasses();
+        $routesArray = $routes->toArray();
+        
+        foreach ($routesArray as $route) {
+            $this->assertNotStringContainsString('NotARoute', $route);
+        }
+    }
+
+    /**
+     * Verifies empty glob results are handled gracefully
+     */
+    public function testReturnsEmptyCollectionWhenNoFilesFound()
+    {
+        $this->app['config']->set('routes.path', app_path('NonExistentPath/**/*.php'));
+        
+        $controller = new RouteController();
+        $routes = $controller->getRouteClasses();
+        
+        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $routes);
+        $this->assertEquals(0, count($routes));
     }
 }
