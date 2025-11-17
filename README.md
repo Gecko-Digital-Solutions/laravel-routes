@@ -4,6 +4,14 @@
 [![Packagist Version](https://img.shields.io/packagist/v/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
 [![PHP Version](https://img.shields.io/packagist/php-v/geckods/laravel-routes)](composer.json)
 
+
+
+[![Tests](https://github.com/Gecko-Digital-Solutions/laravel-routes/actions/workflows/ci.yml/badge.svg)](https://github.com/Gecko-Digital-Solutions/laravel-routes/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/Gecko-Digital-Solutions/laravel-routes/badge.svg?branch=main)](https://coveralls.io/github/Gecko-Digital-Solutions/laravel-routes?branch=main)
+[![Latest Stable Version](https://img.shields.io/packagist/v/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
+[![Total Downloads](https://img.shields.io/packagist/dt/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
+[![License](https://img.shields.io/packagist/l/geckods/laravel-routes.svg)](LICENSE)
+
 ## Overview
 
 **Laravel Routes** is a lightweight Laravel package that helps you organize application routes by feature or functionality instead of keeping them all in a single centralized file. This approach promotes better code organization, maintainability, and scalability in larger Laravel projects.
