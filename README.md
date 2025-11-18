@@ -1,16 +1,18 @@
-# Laravel Routes
+<div align="center">
 
-[![GitHub License](https://img.shields.io/github/license/Gecko-Digital-Solutions/laravel-routes)](LICENSE)
-[![Packagist Version](https://img.shields.io/packagist/v/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
-[![PHP Version](https://img.shields.io/packagist/php-v/geckods/laravel-routes)](composer.json)
-
-
+[![GitHub License](https://img.shields.io/github/license/Gecko-Digital-Solutions/laravel-routes?labelColor=2d2d2d)](LICENSE)
+[![Packagist Version](https://img.shields.io/packagist/v/geckods/laravel-routes?label=Composer&logo=composer&logoColor=white&labelColor=2d2d2d)](https://packagist.org/packages/geckods/laravel-routes)
+[![PHP Version](https://img.shields.io/packagist/php-v/geckods/laravel-routes?logo=php&logoColor=w3F448Dhite&labelColor=2d2d2d&color=3F448D)](composer.json)
+![Laravel](https://img.shields.io/packagist/dependency-v/geckods/laravel-routes/laravel/framework?label=Laravel&logo=laravel&logoColor=FF2D20&labelColor=2d2d2d&color=FF2D20)
 
 [![Tests](https://github.com/Gecko-Digital-Solutions/laravel-routes/actions/workflows/ci.yml/badge.svg)](https://github.com/Gecko-Digital-Solutions/laravel-routes/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/Gecko-Digital-Solutions/laravel-routes/badge.svg?branch=main)](https://coveralls.io/github/Gecko-Digital-Solutions/laravel-routes?branch=main)
-[![Latest Stable Version](https://img.shields.io/packagist/v/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
-[![Total Downloads](https://img.shields.io/packagist/dt/geckods/laravel-routes.svg)](https://packagist.org/packages/geckods/laravel-routes)
-[![License](https://img.shields.io/packagist/l/geckods/laravel-routes.svg)](LICENSE)
+
+</div>
+
+# Laravel Routes
+
+
 
 ## Overview
 
